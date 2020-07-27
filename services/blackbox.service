@@ -1,0 +1,10 @@
+[Unit]
+Description=Blackbox Exporter service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/blackbox_exporter -config.file /usr/local/bin/blackbox.yml
+
+[Install]
+WantedBy=multi-user.target
