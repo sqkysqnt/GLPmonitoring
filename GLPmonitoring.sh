@@ -41,7 +41,32 @@ cd $GOPATH/src/github.com/grafana/loki
 make loki
 cd cmd/loki
 cp loki /usr/local/bin/loki
-cp loki-local-config.yaml /usr/local/bin/config-loki.yml
-#nano /etc/systemd/system/loki.service #Add systemd service definition
-sudo systemctl start loki
-sudo systemctl enable loki
+cp config/loki.yml /usr/local/bin/config-loki.yml
+cp services/loki.service /etc/systemd/system/loki.service
+systemctl start loki
+systemctl enable loki
+
+#Install Promtail
+cd /tmp
+curl -fSL -o promtail.gz "https://github.com/grafana/loki/releases/download/v1.5.0/promtail-linux-amd64.zip"
+gunzip promtail.gz
+cp promtail /usr/local/bin/promtail
+cd /usr/local/bin
+chmod a+x promtail
+cp config/promtail.yml /usr/local/bin/config-promtail.yml
+cp services/promtail.service /etc/systemd/system/promtail.service
+systemctl start promtail
+systemctl enable promtail
+
+#Install snmp_exporter
+cd /tmp
+sudo wget https://github.com/prometheus/snmp_exporter/releases/download/v0.18.0/snmp_exporter-0.18.0.linux-amd64.tar.gz
+sudo tar -xvf snmp_exporter-0.18.0.linux-amd64.tar.gz
+cd snmp_exporter-0.18.0.linux-amd64/
+sudo mv snmp_exporter /usr/local/bin/
+chmod a+x snmp_exporter
+cd /usr/local/bin
+cp config/snmp.yml /usr/local/bin/snmp.yml
+cp services/snmpexporter.service /etc/systemd/system/snmpexporter.service
+sudo systemctl start snmpexporter
+sudo systemctl enable snmpexporter
