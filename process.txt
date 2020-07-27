@@ -1,0 +1,151 @@
+#---------------------------------
+# URLs
+#---------------------------------
+# http://localhost:3000 #Grafana - Main visulization tool, single pane of glass
+# http://localhost:9090 #Prometheus - Collects metrics
+# http://localhost:3100/metrics #Loki - Indexes Logs
+# http://localhost:9080 #Promtail - Collects Logs
+# http://localhost:9116/ #SNMP Exporter - Collects metrics from SNMP clients and sends them to Prometheus
+# http://localhost:9115/ #Blackbox Exporter - Queries webhosts and sends metrics to Prometheus
+# http://localhost:7777/ #Cockpit - Server management tool
+
+#---------------------------------
+# Get started
+#---------------------------------
+# /etc/GLPmonitoring/ contains all the config files
+# Setup email notifications and server domain for links and alerting to work
+# Add unifi information to up.conf to begin polling unifi
+# Add SNMP information for any non unifi networking equipment
+# Use Blackbox Exporter for any icmp/tcp/dns/ssh monitoring.
+# Install node_exporter on any hosts for realtime dynamic monitoring
+#   Linux: https://devopscube.com/monitor-linux-servers-prometheus-node-exporter/
+#   Windows: https://medium.com/@facundofarias/setting-up-a-prometheus-exporter-on-windows-b3e45f1235a5
+# Forward syslogs to localhost:1514 to be indexed by Loki
+# Create dashboards in Grafana!
+
+
+# Things done after stock Ubuntu Server 20.04 install
+# Housekeeping and dependencies
+
+sudo apt update
+sudo apt upgrade
+sudo apt install -y golang
+sudo apt install -y make
+sudo apt install -y docker.io
+sudo apt install -y unzip build-essential libsnmp-dev p7zip-full 
+
+# Install Grafana
+sudo apt-get install -y apt-transport-https
+sudo apt-get install -y software-properties-common wget
+wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+echo "deb https://packages.grafana.com/enterprise/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list 
+sudo apt-get update
+sudo apt-get install grafana-enterprise
+sudo systemctl daemon-reload
+sudo systemctl start grafana-server
+# sudo systemctl status grafana-server
+sudo systemctl enable grafana-server.service
+
+#---------------------------------
+# Install Prometheus
+#---------------------------------
+sudo apt-install prometheus
+
+#---------------------------------
+# Install Loki
+#---------------------------------
+cd /tmp
+sudo git clone https://github.com/grafana/loki $GOPATH/src/github.com/grafana/loki
+cd $GOPATH/src/github.com/grafana/loki
+sudo make loki
+cd cmd/loki
+
+#https://sbcode.net/grafana/install-loki-service/
+sudo cp loki /usr/local/bin/loki
+sudo cp loki-local-config.yaml /usr/local/bin/config-loki.yml
+sudo nano /etc/systemd/system/loki.service #Add systemd service definition
+sudo systemctl start loki
+#sudo systemctl status loki
+sudo systemctl enable loki
+
+
+
+#---------------------------------
+# Install Promtail
+#---------------------------------
+
+cd /usr/local/bin
+sudo curl -fSL -o promtail.gz "https://github.com/grafana/loki/releases/download/v1.5.0/promtail-linux-amd64.zip"
+sudo gunzip promtail.gz
+sudo chmod a+x promtail
+sudo nano config-promtail.yml
+sudo nano /etc/systemd/system/promtail.service #Add systemd service definition
+sudo systemctl start promtail
+#sudo systemctl status promtail
+sudo systemctl enable promtail
+
+
+#---------------------------------
+# Install snmp_exporter
+#---------------------------------
+ 
+sudo wget https://github.com/prometheus/snmp_exporter/releases/download/v0.18.0/snmp_exporter-0.18.0.linux-amd64.tar.gz
+sudo tar -xvf snmp_exporter-0.18.0.linux-amd64.tar.gz
+cd snmp_exporter-0.18.0.linux-amd64/
+sudo mv snmp.yml /usr/local/bin/
+sudo mv snmp_exporter /usr/local/bin/
+sudo nano /etc/systemd/system/snmpexporter.service #Add systemd service definition
+sudo systemctl start snmpexporter
+#sudo systemctl status snmpexporter
+sudo systemctl enable snmpexporter
+
+#---------------------------------
+# Install snmp_exporter Config Generator
+#---------------------------------
+
+go get github.com/prometheus/snmp_exporter/generator
+cd ${GOPATH-$HOME/go}/src/github.com/prometheus/snmp_exporter/generator
+go build
+make mibs
+
+#---------------------------------
+# Install Unifi Poller
+#---------------------------------
+
+curl -s https://golift.io/gpgkey | sudo apt-key add -
+echo deb https://dl.bintray.com/golift/ubuntu bionic main | sudo tee /etc/apt/sources.list.d/golift.list
+sudo apt update
+sudo apt install -y unifi-poller
+sudo nano /etc/unifi-poller/up.conf #Input Unifi Settings
+
+
+#---------------------------------
+# Install Blackbox Exporter
+#---------------------------------
+
+
+#---------------------------------
+# Install Cockpit
+#---------------------------------
+
+#---------------------------------
+# Install Grafana plugins
+#---------------------------------
+sudo grafana-cli plugins install grafana-piechart-panel
+sudo grafana-cli plugins install grafana-image-renderer
+
+
+#---------------------------------
+# All configs in the same place
+#---------------------------------
+sudo mkdir /etc/GLPmonitoring
+sudo ln -s /usr/local/bin/blackbox.yml /etc/GLPmonitoring/blackbox.yml
+sudo ln -s /usr/local/bin/config-loki.yml /etc/GLPmonitoring/loki.yml
+sudo ln -s /usr/local/bin/config-promtail.yml /etc/GLPmonitoring/promtail.yml
+sudo ln -s /usr/local/bin/snmp.yml /etc/GLPmonitoring/snmp.yml
+sudo ln -s /etc/prometheus/prometheus.yml /etc/GLPmonitoring/prometheus.yml
+sudo ln -s /etc/unifi-poller/up.conf /etc/GLPmonitoring/up.conf
+
+
+
+
