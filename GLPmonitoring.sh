@@ -8,11 +8,14 @@ if (( $EUID != 0 )); then
 fi
 
 #Update/Upgrade
-apt update
-apt upgrade
+apt-get update
+apt-get upgrade -y
+apt-get autoremove
+apt-get autoclean
+
 
 #Install Dependancies
-apt install -y unzip build-essential libsnmp-dev p7zip-full docker.io make golang apt-transport-https software-properties-common wget
+apt-get install -y unzip build-essential libsnmp-dev p7zip-full docker.io make golang apt-transport-https software-properties-common wget
 
 
 
@@ -22,14 +25,14 @@ echo "deb https://packages.grafana.com/enterprise/deb stable main" | sudo tee -a
 apt-get update
 
 #Install Grafana
-apt install grafana-enterprise
+apt-get install -y grafana-enterprise
 systemctl daemon-reload
 systemctl start grafana-server
 systemctl enable grafana-server.service
 
 
 #Install Prometheus
-apt install prometheus
+apt-get install -y prometheus
 
 #Install Loki
 cd /tmp
@@ -39,6 +42,6 @@ make loki
 cd cmd/loki
 cp loki /usr/local/bin/loki
 cp loki-local-config.yaml /usr/local/bin/config-loki.yml
-nano /etc/systemd/system/loki.service #Add systemd service definition
+#nano /etc/systemd/system/loki.service #Add systemd service definition
 sudo systemctl start loki
 sudo systemctl enable loki
