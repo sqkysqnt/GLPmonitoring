@@ -1,0 +1,63 @@
+version: "2"
+
+networks:
+  loki:
+
+services:
+  loki:
+    image: grafana/loki:1.5.0
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    restart: unless-stopped
+    networks:
+      - loki
+
+  promtail:
+    image: grafana/promtail:1.5.0
+    volumes:
+      - /var/log:/var/log
+      - syslog-logs:/var/log/log
+    command: -config.file=/etc/promtail/docker-config.yaml
+    restart: unless-stopped
+    networks:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana grafana/grafana
+    restart: unless-stopped
+    networks:
+      - loki
+      
+
+  syslog-ng:
+    image: balabit/syslog-ng:latest
+    ports:
+      - "514:514"
+      - "514:514/udp"
+    volumes:
+      - syslog-logs:/var/log/syslog-ng
+      - syslog-config:/etc/syslog-ng/
+      - syslog-sockit:/var/run/syslog-ng
+    restart: unless-stopped
+    networks:
+      - loki
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - prom-config:/etc/prometheus
+    command:
+      - config.file=/etc/prometheus/prometheus.yml
+      - storage.tsdb.path=/prometheus
+      - web.console.libraries=/usr/share/prometheus/console_libraries
+      - web.console.templates=/usr/share/prometheus/consoles
+    restart: unless-stopped
+    networks:
+      - loki
